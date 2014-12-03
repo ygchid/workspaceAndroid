@@ -1,0 +1,226 @@
+package tk.eatheat.floatingexample;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+
+import com.robotium.solo.Solo;
+
+import tk.eatheat.floatingexample.R;
+import tk.eatheat.floatingexample.FlyBitch;
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.SystemClock;
+import android.app.Activity;
+import android.app.Instrumentation;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.util.Log;
+import android.view.Display;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+public class MainActivity extends Activity{
+	private ImageView imgSource2;
+	private TextView h;
+	private Thread ti,t;
+	private Bitmap bmp, screenBitmap;
+	private Boolean getScreen = true;
+	private int i = 0 , touchedRGB;
+	private Button launch,stop;
+	private Process sh;
+	private MotionEvent event;
+
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.main);
+
+		imgSource2 = (ImageView)findViewById(R.id.imageView1);
+		h = (TextView) findViewById(R.id.textView2);
+		Bundle bundle = getIntent().getExtras();
+
+		if(bundle != null && bundle.getString("LAUNCH").equals("YES")) {
+			startService(new Intent(MainActivity.this, FlyBitch.class));
+		}
+		launch = (Button)findViewById(R.id.button1);
+		stop = (Button)findViewById(R.id.button2);
+		launch.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				startService(new Intent(MainActivity.this, FlyBitch.class));
+				getScreen=true;
+					
+				Thread ti =new Thread(){	 
+		            @Override
+		            public void run(){
+		            	while(getScreen==true ){
+		            		try {
+	                            Thread.sleep(3000);
+	                            i++;
+	                            runOnUiThread(new Runnable() { 
+	                                @Override
+	                                public void run() { 	
+	                                    try {
+	                                    	h.setText(""+i);
+	                                    	getThreadScreen(getScreen);
+	                                    	Log.d("screen","yes1");
+	                                    	t.start(); 
+	                                    }
+	                                    catch(Exception e) 
+	                                    {
+	                                        e.printStackTrace();
+	                                    } 
+	                                }
+	                            });
+		                	}
+		                catch (InterruptedException e) {}	
+		            	}
+		            }
+		        };
+		        ti.start();
+			}
+		});
+		stop.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				stopService(new Intent(MainActivity.this, FlyBitch.class));
+				getScreen = false;
+				getThreadScreen(getScreen);
+				t.start();
+				t.stop();
+			}
+		});
+		
+	}
+	@Override
+	protected void onResume() {
+		Bundle bundle = getIntent().getExtras();
+
+		if(bundle != null && bundle.getString("LAUNCH").equals("YES")) {
+			startService(new Intent(MainActivity.this, FlyBitch.class));
+		}
+		super.onResume();
+	}
+	
+	public void getThreadScreen(final boolean screen){
+			t = new Thread(){	 
+                @Override
+                public void run() {
+                	if(screen==true){
+                        try {
+							try {
+								sh = Runtime.getRuntime().exec("su", null, null);
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+			                OutputStream  os = sh.getOutputStream();
+			                try {
+								os.write(("/system/bin/screencap -p " + "/sdcard/img.png").getBytes("ASCII"));
+								os.flush(); 
+								os.close();
+								try {
+									sh.waitFor();
+								} catch (InterruptedException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+	                		} catch (UnsupportedEncodingException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}   
+			
+			                screenBitmap = BitmapFactory.decodeFile(Environment.getExternalStorageDirectory()+ File.separator +"img.png");
+			                ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+							screenBitmap.compress(Bitmap.CompressFormat.JPEG, 15, bytes);
+	
+		    			     Display display = getWindowManager().getDefaultDisplay(); 
+		    				 int width = display.getWidth();
+		    				 int height = display.getHeight();
+		    				 int flag = -7886798;
+		    			     int pixel = screenBitmap.getPixel(386,377);
+		    			     
+    				         if(Color.red(pixel)==143 && Color.blue(pixel)==51 && Color.green(pixel)==178){
+    				        	 Log.d("screen","screen yes");
+    				        	 Shell s = new Shell();
+    				        	 String command []= {"su","-c","input tap 386 377"};
+    				        	 s.sendShellCommand(command);
+//		        	             Instrumentation m_Instrumentation = new Instrumentation();
+//		        	            
+//		        	             MotionEvent mo = MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(),KeyEvent.KEYCODE_DPAD_RIGHT, 386, 377,0 );
+//		        	             mo.getAction();
+//		        	             m_Instrumentation.sendPointerSync(mo);
+//		        	             MotionEvent mo1 = MotionEvent.obtain(SystemClock.uptimeMillis(),SystemClock.uptimeMillis(),MotionEvent.ACTION_UP,386,377,0); 
+//		        	             m_Instrumentation.sendPointerSync(mo1);
+//		        	             m_Instrumentation.setInTouchMode(true);
+
+		    			     }else{
+		    			    	 Log.d("screen","screen no");
+		    			     }
+			    			
+//							
+//							//my code for saving
+//							ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+//							screen.compress(Bitmap.CompressFormat.JPEG, 15, bytes);
+//																
+//							try {
+//								File f = new File(Environment.getExternalStorageDirectory()+ File.separator + "test.jpg");
+//								f.createNewFile();
+//								FileOutputStream fo = new FileOutputStream(f);
+//								fo.write(bytes.toByteArray());
+//								fo.close();
+//							} catch (IOException e) {
+//								// TODO Auto-generated catch block
+//								e.printStackTrace();
+//							}
+                        	
+                        }
+                        catch(Exception e) {e.printStackTrace();}
+                	}
+                }
+			};
+	}
+	@Override
+	public boolean onTouchEvent(MotionEvent e) {
+		return true;
+	}
+	
+	public Bitmap getBitmapOfView(View v)
+	{
+	    View rootview = v.getRootView();
+		rootview.setDrawingCacheEnabled(true);
+		Bitmap bmp = rootview.getDrawingCache();
+		return bmp;
+	}
+	public void createImageFromBitmap(Bitmap bmp)
+    {
+    	ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		bmp.compress(Bitmap.CompressFormat.JPEG, 40, bytes);
+		File file = new File( Environment.getExternalStorageDirectory() + "/capturedscreen.jpg");
+		try 
+		{
+			file.createNewFile();
+			FileOutputStream ostream = new FileOutputStream(file);
+			ostream.write(bytes.toByteArray());        
+			ostream.close();
+		} 
+		catch (Exception e) 
+		{
+			e.printStackTrace();
+		}    
+    }
+}
